@@ -1156,6 +1156,22 @@
         // --- converted document + footnote list ---
 
         const sheet = renderDocumentSheet("converted");
+
+        // References that were never cited stay in the reference list of the
+        // downloaded file, so the converted preview shows that list too, in
+        // body order: it is part of the text, while footnotes sit at the foot.
+        const uncitedRefs = state.refs.filter((r) => !r.citationCount);
+        if (uncitedRefs.length && state.citationCount) {
+          sheetDivider(sheet, "References");
+          uncitedRefs.forEach((r) => {
+            const row = document.createElement("div");
+            row.className = "mrg-fn-item";
+            row.setAttribute("data-cite", r.id);
+            row.appendChild(document.createTextNode(r.text));
+            sheet.appendChild(row);
+          });
+        }
+
         sheetDivider(sheet, "Footnotes");
 
         if (state.notes.length) {
