@@ -27,6 +27,7 @@
       body {
         margin: 0;
         padding: 0;
+        overscroll-behavior: none;
       }
 
       .mrg-root {
@@ -351,6 +352,9 @@
         border-radius: 4px;
         padding: 9px 12px;
         margin-bottom: 16px;
+      }
+      .mrg-notice-after {
+        margin: 16px 0 0;
       }
       .mrg-notice strong {
         color: var(--ink);
@@ -1008,6 +1012,18 @@
         }
 
         el.appendChild(sheet);
+
+        // Placed after the sheet rather than above it, so the converted sheet
+        // starts level with the original on the left.
+        const uncited = state.refs.filter((r) => !r.citationCount);
+        if (uncited.length) {
+          const n = noticeEl(
+            `<strong>${plural(uncited.length, "reference")} ${uncited.length === 1 ? "is" : "are"} never cited</strong> in the text. ${uncited.length === 1 ? "It stays" : "They stay"} in the reference list rather than becoming a footnote.`,
+          );
+          n.classList.add("mrg-notice-after");
+          el.appendChild(n);
+        }
+
         attachHoverHandlers(sheet);
       }
 
@@ -1078,15 +1094,6 @@
           );
         }
 
-        const uncited = state.refs.filter((r) => !r.citationCount);
-        if (uncited.length) {
-          el.appendChild(
-            noticeEl(
-              `<strong>${plural(uncited.length, "reference")} ${uncited.length === 1 ? "is" : "are"} never cited</strong> in the text. ${uncited.length === 1 ? "It stays" : "They stay"} in the reference list rather than becoming a footnote.`,
-            ),
-          );
-        }
-
         const missing = state.refs.filter((r) => !r.url && r.citationCount);
         if (missing.length) {
           el.appendChild(
@@ -1127,6 +1134,18 @@
         }
 
         el.appendChild(sheet);
+
+        // Placed after the sheet rather than above it, so the converted sheet
+        // starts level with the original on the left.
+        const uncited = state.refs.filter((r) => !r.citationCount);
+        if (uncited.length) {
+          const n = noticeEl(
+            `<strong>${plural(uncited.length, "reference")} ${uncited.length === 1 ? "is" : "are"} never cited</strong> in the text. ${uncited.length === 1 ? "It stays" : "They stay"} in the reference list rather than becoming a footnote.`,
+          );
+          n.classList.add("mrg-notice-after");
+          el.appendChild(n);
+        }
+
         attachHoverHandlers(sheet);
         attachHoverHandlers(document.getElementById("mrg-left-content"));
         syncActiveClasses();
