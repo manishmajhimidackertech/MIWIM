@@ -62,6 +62,9 @@
         --gold-wash: rgba(166, 117, 44, 0.14);
         --slate: #3d5a80;
         --slate-wash: rgba(61, 90, 128, 0.12);
+        /* Side gutter shared by the top bar and both panes, so the logo and
+           the Start over button line up with the edges of the canvases. */
+        --gutter: 30px;
         font-family: "Inter", sans-serif;
         color: var(--ink);
         background: var(--paper);
@@ -79,7 +82,7 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 18px 28px;
+        padding: 18px var(--gutter);
         border-bottom: 1px solid var(--rule);
         background: var(--paper-raised);
       }
@@ -161,7 +164,7 @@
       }
 
       .mrg-pane {
-        padding: 26px 30px 60px;
+        padding: 26px var(--gutter) 60px;
         position: relative;
       }
       .mrg-pane-left {
@@ -498,6 +501,33 @@
           0 8px 22px rgba(0, 0, 0, 0.38),
           0 3px 8px rgba(0, 0, 0, 0.26);
       }
+      /* Until the button is pressed once, a gold ring keeps pulsing out of it
+         so a first-time reader notices where the download is. The ring is a
+         pseudo-element so the button's own shadow stays as it is. */
+      .mrg-fab-pulse::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        box-shadow: 0 0 0 0 rgba(166, 117, 44, 0.6);
+        animation: mrg-fab-pulse 1.8s ease-out 0.4s infinite;
+        pointer-events: none;
+      }
+      @keyframes mrg-fab-pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(166, 117, 44, 0.6);
+        }
+        70%,
+        100% {
+          box-shadow: 0 0 0 16px rgba(166, 117, 44, 0);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .mrg-fab-pulse::after {
+          animation: none;
+          box-shadow: 0 0 0 3px rgba(166, 117, 44, 0.6);
+        }
+      }
       @keyframes mrg-fab-in {
         from {
           opacity: 0;
@@ -619,6 +649,7 @@
         notes: [],
         orphanFootnotes: [],
         alreadyConverted: false,
+        fabPressed: false, // the save button pulses until this is true
       };
 
       // ---- helpers ----
@@ -733,6 +764,8 @@
               state.notes = result.notes;
               state.orphanFootnotes = result.orphanFootnotes;
               state.alreadyConverted = result.alreadyConverted;
+              // Every newly loaded document gets the pulse again.
+              state.fabPressed = false;
               state.stage = "done";
               render();
             }, 1050),
@@ -764,6 +797,7 @@
           notes: [],
           orphanFootnotes: [],
           alreadyConverted: false,
+          fabPressed: false,
         });
         render();
       }
@@ -1034,18 +1068,6 @@
         }
 
         el.appendChild(sheet);
-
-        // Placed after the sheet rather than above it, so the converted sheet
-        // starts level with the original on the left.
-        const uncited = state.refs.filter((r) => !r.citationCount);
-        if (uncited.length) {
-          const n = noticeEl(
-            `<strong>${plural(uncited.length, "reference")} ${uncited.length === 1 ? "is" : "are"} never cited</strong> in the text. ${uncited.length === 1 ? "It stays" : "They stay"} in the reference list rather than becoming a footnote.`,
-          );
-          n.classList.add("mrg-notice-after");
-          el.appendChild(n);
-        }
-
         attachHoverHandlers(sheet);
       }
 
@@ -1179,6 +1201,7 @@
         if (state.stage !== "done") return;
         const btn = document.createElement("button");
         btn.className = "mrg-btn mrg-btn-primary mrg-fab";
+        if (!state.fabPressed && !btn.disabled) btn.classList.add("mrg-fab-pulse");
         btn.disabled = state.citationCount === 0;
         btn.title = btn.disabled
           ? state.alreadyConverted
@@ -1187,7 +1210,11 @@
           : "Download .docx";
         btn.setAttribute("aria-label", btn.title);
         btn.textContent = "💾";
-        btn.onclick = handleDownload;
+        btn.onclick = () => {
+          state.fabPressed = true;
+          btn.classList.remove("mrg-fab-pulse");
+          handleDownload();
+        };
         slot.appendChild(btn);
       }
 
