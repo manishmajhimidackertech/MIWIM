@@ -495,6 +495,80 @@
           0 2px 6px rgba(0, 0, 0, 0.22);
         z-index: 20;
         animation: mrg-fab-in 0.25s ease;
+        transition:
+          transform 0.12s ease,
+          background 0.2s ease,
+          border-color 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+      /* Press feedback: the button sinks under the finger. */
+      .mrg-fab:active:not(:disabled) {
+        transform: scale(0.9);
+        box-shadow:
+          0 2px 8px rgba(0, 0, 0, 0.3),
+          0 1px 3px rgba(0, 0, 0, 0.2);
+      }
+      /* While the file is being built: a spinner in place of the icon. */
+      .mrg-fab-spinner {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 2.5px solid rgba(247, 245, 239, 0.25);
+        border-top-color: #f7f5ef;
+        animation: mrg-spin 0.7s linear infinite;
+      }
+      @keyframes mrg-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .mrg-fab.is-busy {
+        cursor: progress;
+      }
+      /* Once the download has been handed to the browser: a gold tick that
+         pops in, held briefly before the button returns to normal. */
+      .mrg-btn-primary.mrg-fab.is-done,
+      .mrg-btn-primary.mrg-fab.is-done:hover {
+        background: #a6752c; /* --gold; the button sits outside .mrg-root */
+        border-color: #a6752c;
+        color: #fff;
+        font-size: 24px;
+        animation: mrg-fab-pop 0.35s cubic-bezier(0.3, 1.6, 0.5, 1);
+      }
+      @keyframes mrg-fab-pop {
+        0% {
+          transform: scale(0.8);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+      .mrg-btn-primary.mrg-fab.is-error,
+      .mrg-btn-primary.mrg-fab.is-error:hover {
+        background: #8a3324;
+        border-color: #8a3324;
+        animation: mrg-fab-shake 0.4s ease;
+      }
+      @keyframes mrg-fab-shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        25% {
+          transform: translateX(-5px);
+        }
+        75% {
+          transform: translateX(5px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .mrg-fab,
+        .mrg-fab-spinner,
+        .mrg-btn-primary.mrg-fab.is-done,
+        .mrg-btn-primary.mrg-fab.is-error {
+          animation: none;
+          transition: none;
+        }
       }
       .mrg-btn-primary.mrg-fab {
         background: #33332f;
@@ -656,6 +730,7 @@
         orphanFootnotes: [],
         alreadyConverted: false,
         fabPressed: false, // the save button pulses until this is true
+        fabStatus: "idle", // idle | busy | done | error, for press feedback
       };
 
       // ---- helpers ----
@@ -772,6 +847,7 @@
               state.alreadyConverted = result.alreadyConverted;
               // Every newly loaded document gets the pulse again.
               state.fabPressed = false;
+              state.fabStatus = "idle";
               state.stage = "done";
               render();
             }, 1050),
@@ -804,6 +880,7 @@
           orphanFootnotes: [],
           alreadyConverted: false,
           fabPressed: false,
+          fabStatus: "idle",
         });
         render();
       }
@@ -830,8 +907,10 @@
           a.click();
           a.remove();
           setTimeout(() => URL.revokeObjectURL(url), 4000);
+          return true;
         } catch (err) {
           alert("Couldn't generate the download: " + (err.message || err));
+          return false;
         }
       }
 
@@ -1229,21 +1308,51 @@
         if (state.stage !== "done") return;
         const btn = document.createElement("button");
         btn.className = "mrg-btn mrg-btn-primary mrg-fab";
-        if (!state.fabPressed && !btn.disabled) btn.classList.add("mrg-fab-pulse");
         btn.disabled = state.citationCount === 0;
+        if (!state.fabPressed && !btn.disabled) btn.classList.add("mrg-fab-pulse");
         btn.title = btn.disabled
           ? state.alreadyConverted
             ? "Nothing to convert — this document already uses footnotes"
             : "Nothing to convert"
           : "Download .docx";
         btn.setAttribute("aria-label", btn.title);
-        btn.textContent = "💾";
-        btn.onclick = () => {
+        applyFabStatus(btn);
+        btn.onclick = async () => {
+          if (state.fabStatus === "busy") return;
           state.fabPressed = true;
           btn.classList.remove("mrg-fab-pulse");
-          handleDownload();
+          setFabStatus("busy");
+          const ok = await handleDownload();
+          setFabStatus(ok ? "done" : "error");
+          clearTimeout(fabResetTimer);
+          fabResetTimer = setTimeout(() => setFabStatus("idle"), ok ? 1600 : 900);
         };
         slot.appendChild(btn);
+      }
+
+      let fabResetTimer = null;
+
+      /** Change the save button's feedback state in place, without re-rendering. */
+      function setFabStatus(status) {
+        state.fabStatus = status;
+        const btn = document.querySelector(".mrg-fab");
+        if (btn) applyFabStatus(btn);
+      }
+
+      function applyFabStatus(btn) {
+        const status = state.fabStatus;
+        btn.classList.toggle("is-busy", status === "busy");
+        btn.classList.toggle("is-done", status === "done");
+        btn.classList.toggle("is-error", status === "error");
+        btn.setAttribute("aria-busy", status === "busy" ? "true" : "false");
+        btn.innerHTML = "";
+        if (status === "busy") {
+          const spin = document.createElement("span");
+          spin.className = "mrg-fab-spinner";
+          btn.appendChild(spin);
+        } else {
+          btn.textContent = status === "done" ? "✓" : status === "error" ? "!" : "💾";
+        }
       }
 
       // Whole-window drag and drop, so the file lands wherever it is dropped.
