@@ -1101,18 +1101,21 @@
         }
 
         // --- notices, most important first ---
+        // Collected here but placed after the sheet, so the converted sheet
+        // starts level with the original on the left.
+        const notices = [];
 
         if (state.alreadyConverted) {
           // The document is already in footnote form. Nothing to convert, and
           // saying so plainly is more use than an error about missing
           // references, which would suggest something is wrong when nothing is.
-          el.appendChild(
+          notices.push(
             noticeEl(
               `<strong>This document already uses footnotes.</strong> ${plural(state.notes.length, "footnote")} found and no in-text citations left to convert, so it's shown as it is.`,
             ),
           );
         } else if (!state.refs.length) {
-          el.appendChild(
+          notices.push(
             noticeEl(
               state.hasRefsSection
                 ? `<strong>No reference entries found.</strong> A references heading was found, but nothing followed it, so there's nothing to convert.`
@@ -1125,7 +1128,7 @@
         if (existingCount && state.citationCount) {
           // Mixed document: numbering runs across both kinds, which is worth
           // saying before someone wonders why their first citation is note 4.
-          el.appendChild(
+          notices.push(
             noticeEl(
               `<strong>${plural(existingCount, "footnote")} already in this document</strong> ${existingCount === 1 ? "is" : "are"} kept as ${existingCount === 1 ? "it is" : "they are"}. The ${plural(state.citationCount, "new footnote")} ${state.citationCount === 1 ? "is" : "are"} numbered alongside ${existingCount === 1 ? "it" : "them"}, in reading order.`,
             ),
@@ -1137,18 +1140,27 @@
             .slice(0, 3)
             .map((u) => escapeHtml(u.text))
             .join(" · ");
-          el.appendChild(
+          notices.push(
             noticeEl(
               `<strong>${plural(state.unmatched.length, "citation")} couldn't be matched</strong> to a reference entry, so ${state.unmatched.length === 1 ? "it was" : "they were"} left in the text untouched: ${sample}${state.unmatched.length > 3 ? " …" : ""}`,
             ),
           );
         }
 
+        const uncited = state.refs.filter((r) => !r.citationCount);
+        if (uncited.length) {
+          notices.push(
+            noticeEl(
+              `<strong>${plural(uncited.length, "reference")} ${uncited.length === 1 ? "is" : "are"} never cited</strong> in the text. ${uncited.length === 1 ? "It stays" : "They stay"} in the reference list rather than becoming a footnote.`,
+            ),
+          );
+        }
+
         const missing = state.refs.filter((r) => !r.url && r.citationCount);
         if (missing.length) {
-          el.appendChild(
+          notices.push(
             noticeEl(
-              `<strong>${plural(missing.length, "reference")} had no link.</strong> Add a source URL below, or leave it blank to write the full reference into the footnote instead.`,
+              `<strong>${plural(missing.length, "reference")} had no link.</strong> Add a source URL above, or leave it blank to write the full reference into the footnote instead.`,
             ),
           );
         }
@@ -1201,16 +1213,10 @@
 
         el.appendChild(sheet);
 
-        // Placed after the sheet rather than above it, so the converted sheet
-        // starts level with the original on the left.
-        const uncited = state.refs.filter((r) => !r.citationCount);
-        if (uncited.length) {
-          const n = noticeEl(
-            `<strong>${plural(uncited.length, "reference")} ${uncited.length === 1 ? "is" : "are"} never cited</strong> in the text. ${uncited.length === 1 ? "It stays" : "They stay"} in the reference list rather than becoming a footnote.`,
-          );
+        notices.forEach((n) => {
           n.classList.add("mrg-notice-after");
           el.appendChild(n);
-        }
+        });
 
         attachHoverHandlers(sheet);
         attachHoverHandlers(document.getElementById("mrg-left-content"));
