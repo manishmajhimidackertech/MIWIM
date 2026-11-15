@@ -29,6 +29,28 @@
         padding: 0;
         overscroll-behavior: none;
       }
+      /* Scrollbar in the page's own paper-and-gold palette instead of the
+         browser's grey. Values repeat the .mrg-root tokens because the
+         scrollbar belongs to html, outside that scope. */
+      html {
+        background: #ece9e1;
+        scrollbar-color: #c4bba6 #ece9e1; /* Firefox, Chrome 121+ */
+      }
+      ::-webkit-scrollbar {
+        width: 12px;
+        height: 12px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #ece9e1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #c4bba6;
+        border: 3px solid #ece9e1;
+        border-radius: 6px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #a6752c;
+      }
 
       .mrg-root {
         --paper: #ece9e1;
