@@ -27,6 +27,29 @@
       body {
         margin: 0;
         padding: 0;
+        overscroll-behavior: none;
+      }
+      /* Scrollbar in the page's own paper-and-gold palette instead of the
+         browser's grey. Values repeat the .mrg-root tokens because the
+         scrollbar belongs to html, outside that scope. */
+      html {
+        background: #ece9e1;
+        scrollbar-color: #c4bba6 #ece9e1; /* Firefox, Chrome 121+ */
+      }
+      ::-webkit-scrollbar {
+        width: 12px;
+        height: 12px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #ece9e1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #c4bba6;
+        border: 3px solid #ece9e1;
+        border-radius: 6px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #a6752c;
       }
 
       .mrg-root {
@@ -351,6 +374,9 @@
         border-radius: 4px;
         padding: 9px 12px;
         margin-bottom: 16px;
+      }
+      .mrg-notice-after {
+        margin: 16px 0 0;
       }
       .mrg-notice strong {
         color: var(--ink);
@@ -1008,6 +1034,18 @@
         }
 
         el.appendChild(sheet);
+
+        // Placed after the sheet rather than above it, so the converted sheet
+        // starts level with the original on the left.
+        const uncited = state.refs.filter((r) => !r.citationCount);
+        if (uncited.length) {
+          const n = noticeEl(
+            `<strong>${plural(uncited.length, "reference")} ${uncited.length === 1 ? "is" : "are"} never cited</strong> in the text. ${uncited.length === 1 ? "It stays" : "They stay"} in the reference list rather than becoming a footnote.`,
+          );
+          n.classList.add("mrg-notice-after");
+          el.appendChild(n);
+        }
+
         attachHoverHandlers(sheet);
       }
 
@@ -1078,15 +1116,6 @@
           );
         }
 
-        const uncited = state.refs.filter((r) => !r.citationCount);
-        if (uncited.length) {
-          el.appendChild(
-            noticeEl(
-              `<strong>${plural(uncited.length, "reference")} ${uncited.length === 1 ? "is" : "are"} never cited</strong> in the text. ${uncited.length === 1 ? "It stays" : "They stay"} in the reference list rather than becoming a footnote.`,
-            ),
-          );
-        }
-
         const missing = state.refs.filter((r) => !r.url && r.citationCount);
         if (missing.length) {
           el.appendChild(
@@ -1127,6 +1156,18 @@
         }
 
         el.appendChild(sheet);
+
+        // Placed after the sheet rather than above it, so the converted sheet
+        // starts level with the original on the left.
+        const uncited = state.refs.filter((r) => !r.citationCount);
+        if (uncited.length) {
+          const n = noticeEl(
+            `<strong>${plural(uncited.length, "reference")} ${uncited.length === 1 ? "is" : "are"} never cited</strong> in the text. ${uncited.length === 1 ? "It stays" : "They stay"} in the reference list rather than becoming a footnote.`,
+          );
+          n.classList.add("mrg-notice-after");
+          el.appendChild(n);
+        }
+
         attachHoverHandlers(sheet);
         attachHoverHandlers(document.getElementById("mrg-left-content"));
         syncActiveClasses();
